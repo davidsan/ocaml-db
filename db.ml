@@ -124,7 +124,7 @@ object (self)
       match l with
       | [] -> accu
       | hd::tl ->
-      match (e hd) with
+	match (e hd) with
 	| "false" -> f tl accu
 	| _ -> f tl (hd::accu)
     in f rows []
@@ -135,7 +135,7 @@ object (self)
       match l with
       | [] -> raise Not_found
       | hd::tl ->
-      match (e hd) with
+	match (e hd) with
 	| "false" -> f tl
 	| _ -> hd
     in f rows
@@ -155,24 +155,28 @@ object (self)
     let rec f l =
       match l with
       | [] -> List.iter
-	(fun x ->
-      if not (List.mem_assoc x data)
-      then r#update x "")
-	self#describe;
-	rows <- r::rows;
-	r
+      	(fun x ->
+          if not (List.mem_assoc x data)
+          then r#update x "")
+      	self#describe;
+      	rows <- r::rows;
+      	r
       | (field, value)::tl ->
-	if List.mem field self#describe then begin
-	  r#update field value;
-	  f tl
-	end else raise Unbound_field
+      	if List.mem field self#describe then
+          begin
+      	    r#update field value;
+      	    f tl
+	  end else raise Unbound_field
     in f data
   (** Adds a field. If it already exists, this method does nothing.
       A new value is computed for each row using an expression
       (which can use the values of other fields of the row). *)
-  method add_column field e=
-    fields <- fields@[field];
-    List.iter (fun r -> r#update field (e r)) rows
+  method add_column field e =
+    if not (List.mem field self#describe) then
+    begin
+      fields <- fields@[field];
+      List.iter (fun r -> r#update field (e r)) rows
+    end
   (** Removes a field and the associated values in all rows.
       If an unknown field is given, Unbound_field is raised. *)
   method remove_column field =
@@ -190,9 +194,9 @@ let strip_quotes str =
   let offset = 1 in
   String.sub str offset (String.length str - offset - 1);;
 (** Imports a database from a CSV file.
-   The first line must contains the field names.
-   Fields are separated by commas, all fields have to be surrounded by
-   double quotes (""). *)
+    The first line must contains the field names.
+    Fields are separated by commas, all fields have to be surrounded by
+    double quotes (""). *)
 (* FIXME: This assumes that the file supplied is in the CSV format. *)
 let read_csv filename =
   let chan = open_in filename in
@@ -203,8 +207,8 @@ let read_csv filename =
     List.iter
       (fun x ->
         new_db#add_column
-        (strip_quotes x)
-        (const ""))
+          (strip_quotes x)
+          (const ""))
       (remove_last (Str.split_delim ifs fields));
     while true; do
       let buffer = input_line chan in
@@ -235,7 +239,7 @@ let print_db chan db =
       Printf.fprintf chan "\n")
     db#all
 (** Exports a database to a CSV file.
-   Same format as read_csv. *)
+    Same format as read_csv. *)
 let write_csv filename db =
   let chan = open_out filename in
   print_db chan db;
