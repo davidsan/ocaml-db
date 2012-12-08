@@ -1,6 +1,6 @@
 (* File: db.ml
    David San
-   email: davidsan@etu.upmc.fr
+   email: david.san@etu.upmc.fr
 
    Str library must be linked at compilation
    $ ocamlc str.cma db.ml
