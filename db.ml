@@ -83,29 +83,6 @@ let string_op string_fun e1 e2 =
     string_fun (e1 row) (e2 row)
   in f
 
-(** The implementation of rows in the database. *)
-class db_row : row = object
-  (* Mark is set to true when the object is scheduled for garbage collection. *)
-  val mutable mark = false
-  (* Average number of fields in a database table. *)
-  val mutable tbl = Hashtbl.create 15
-  (** Returns the value of a given field.
-      May raise Unbound_field. *)
-  method access field =
-    try
-      if mark then raise Unbound_row else
-	Hashtbl.find tbl field
-    with Not_found -> raise Unbound_field
-  (** Sets the value of a given field.
-      May raise Unbound_field. *)
-  method update field value =
-    if mark then raise Unbound_row else
-      Hashtbl.replace tbl field value
-  (** Removes this row from its database.
-      Any use of the object after a call to this method will raise Unbound_row. *)
-  method destroy () = mark<-true
-end
-
 (** The type of databases.
     Instanciating this classe creates an empty database,
     using the field names given as arguments. *)
@@ -142,8 +119,10 @@ object (self)
   (** Removes a row from the database.
       Any use of the object after a call to this method will raise Unbound_row. *)
   method delete r =
+    if (List.mem r rows) then begin
     rows <- List.filter (fun x -> x<>r) rows;
     r#destroy()
+  end
   (** Returns the list of field names. *)
   method describe =
     fields
@@ -151,7 +130,30 @@ object (self)
       If a field is not given, its value is "".
       If an unknown field is given, Unbound_field is raised. *)
   method insert data =
-    let r = new db_row in
+    let r = (object (this)
+      (* Mark is set to true when the object is scheduled for garbage collection. *)
+      val mutable mark = false
+      (* Average number of fields in a database table. *)
+      val mutable tbl = Hashtbl.create 15
+      (** Returns the value of a given field.
+          May raise Unbound_field. *)
+      method access field =
+        try
+          if mark then raise Unbound_row else
+      Hashtbl.find tbl field
+        with Not_found -> raise Unbound_field
+      (** Sets the value of a given field.
+          May raise Unbound_field. *)
+      method update field value =
+        if mark then raise Unbound_row else
+          Hashtbl.replace tbl field value
+      (** Removes this row from its database.
+          Any use of the object after a call to this method will raise Unbound_row. *)
+      method destroy () =
+          mark<-true;
+          self#delete(this)
+    end : row)
+    in
     let rec f l =
       match l with
       | [] -> List.iter
